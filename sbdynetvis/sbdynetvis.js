@@ -67,7 +67,7 @@
 
     const ctx = document.getElementById('chart');
 
-    const plotdata = timecourse_times.map((t, i) => ({
+    window.plotdata = timecourse_times.map((t, i) => ({
       x: t,
       y: obj.value[i]
     }));
@@ -76,26 +76,41 @@
       data: {
         datasets: [{
           data: plotdata,
-          showLine: true,
-          fill: false,
           borderColor: 'black',
+          backgroundColor: 'transparent',
+          fill: false,
           pointRadius: 0
-        }]
+        },
+        {
+          data: [],
+          backgroundColor: 'rgba(75, 192, 192, 0.3)',
+          borderWidth: 0,
+          pointRadius: 0,
+          fill: true
+        }
+        ]
       },
       options: {
         borderWidth: 1,
+        responsive: true,
+        animation: {
+          duration: 0
+        },
         scales: {
           x: {
             type: 'linear',
             title: { display: true, text: 'Time' }
           },
           y: {
-            title: { display: true, text: chartNode.id() }
+            title: { display: true, text: chartNode.id() },
+            min: Math.min(...plotdata.map(dataPoint => dataPoint.y)), 
+            max: Math.max(...plotdata.map(dataPoint => dataPoint.y))
           }
         },
         plugins: {legend: {display: false}}
       }
     });
+    animateFill();
 
   });
   cy.on('unselect', 'node', function(event) {
@@ -103,6 +118,7 @@
       myChart.destroy();
       document.getElementById('popup').style.display = 'none';
       chartNode = null;
+      myChart = null;
     }
   });
   document.addEventListener('mousedown', function(event) {
@@ -125,6 +141,10 @@
 
 })();
 
+function animateFill() {
+  myChart.data.datasets[1].data = plotdata.slice(0, currentTime);
+  myChart.update();
+}
 ////////////////////////////
 var node_max_min = [{}];
 var edge_max_min = [{}];
@@ -245,6 +265,7 @@ const slider_progress = document.getElementById("progress");
 let playtimer = null;
 var prog = false;
 var currentTime = 0;
+var currentSpeed = 300;
 playback_position.textContent = timecourse_times[0];
 end_position.textContent = timecourse_times[timecourse_times.length - 1];
 
@@ -264,6 +285,9 @@ const animation_step = function(){
     values = obj.value;
     edge_animation(edge, currentTime, values);        
   });
+  if (typeof myChart !== 'undefined' && myChart) {
+    animateFill();
+  }
 }
 
 const startTimer = function(){
@@ -275,7 +299,7 @@ const startTimer = function(){
     }
     animation_step();
     currentTime++;
-  }, 100);
+  }, currentSpeed);
 };
 
 const stopTimer = function(){
@@ -364,6 +388,30 @@ btn_save.addEventListener("click", (e) => {
   a.download = "diagram.txt";
   a.click();
   URL.revokeObjectURL(url);
+});
+////////////////////////////
+//timer speed
+
+const timerSpeed = [{label: 'slow', value: 500}, 
+                    {label: 'normal', value: 300},
+                    {label: 'fast', value: 100},
+                    {label: 'very fast', value: 50}];
+const selectTimerSpeed = document.getElementById('timerspeed');
+timerSpeed.forEach(item => {
+  const option = document.createElement('option'); 
+  option.value = item.value;
+  option.textContent = item.label; 
+  selectTimerSpeed.appendChild(option);
+});
+selectTimerSpeed.value = 300;
+
+selectTimerSpeed.addEventListener('change', (e) => {
+  currentSpeed = parseInt(e.target.value);
+  if(btn_play.textContent === "Pause"){
+    stopTimer();
+    startTimer();
+  }
+
 });
 ////////////////////////////
 //control
